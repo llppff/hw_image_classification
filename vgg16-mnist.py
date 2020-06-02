@@ -3,14 +3,6 @@ from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 
 class VGG16_Mode():
-    """ create vgg16 network use tensorflow
-        VGG16 network structure:
-        (conv 3x3 64)=>(conv 3x3 64, pool/2)
-        (conv 3x3 128)=>(conv 3x3 128, pool/2)
-        (conv 3x3 256)=>(conv 3x3 256)=>(conv 3x3 256)=>(conv 3x3 256, pool/2)
-        (conv 3x3 512)=>(conv 3x3 512)=>(conv 3x3 512)=>(conv 3x3 512, pool/2)
-        (fc 4096)=>(fc 4096)=>(fc 1000)=>(fc classes)
-    """
 
     #定义卷积层
     def conv_layer(self, data, ksize, stride, name, w_biases = False,padding = "SAME"):
@@ -62,49 +54,43 @@ class VGG16_Mode():
     def model_bulid(self, height, width, channel,classes):
         x = tf.placeholder(dtype= tf.float32, shape = [None,height,width,channel])
         y = tf.placeholder(dtype= tf.float32 ,shape=[None,classes])
+        # mnist_image_size:28*28，下方实现卷积层的函数中padding参数取值为'SAME'时，意思是经过卷积后image尺寸不变，padding具体尺寸根据需要而变化
+        conv1_1 = tf.nn.relu(self.conv_layer(x,ksize= [3,3,1,64],stride=[1,1,1,1],padding="SAME",name="conv1_1"))#(None,28,28,64)
+        conv1_2 = tf.nn.relu(self.conv_layer(conv1_1,ksize=[3,3,64,64],stride=[1,1,1,1],padding="SAME",name="conv1_2"))#(None,28,28,64)
+        pool1_1 = self.pool_layer(conv1_2,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool1_1")#（None,14,14,64)
 
-        # conv 1 ,if image Nx465x128x1 ,(conv 3x3 64)=>(conv 3x3 64, pool/2)
-        conv1_1 = tf.nn.relu(self.conv_layer(x,ksize= [3,3,1,64],stride=[1,1,1,1],padding="SAME",name="conv1_1"))
-        conv1_2 = tf.nn.relu(self.conv_layer(conv1_1,ksize=[3,3,64,64],stride=[1,1,1,1],padding="SAME",name="conv1_2")) # Nx465x128x1 ==>   Nx465x128x64
-        pool1_1 = self.pool_layer(conv1_2,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool1_1") # N*232x64x64
 
-        # conv 2,(conv 3x3 128)=>(conv 3x3 128, pool/2)
-        conv2_1 = tf.nn.relu(self.conv_layer(pool1_1,ksize=[3,3,64,128],stride=[1,1,1,1],padding="SAME",name="conv2_1"))
-        conv2_2 = tf.nn.relu(self.conv_layer(conv2_1,ksize=[3,3,128,128],stride=[1,1,1,1],padding="SAME",name="conv2_2")) # Nx232x64x128
-        pool2_1 = self.pool_layer(conv2_2,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool2_1") # Nx116x32x128
+        conv2_1 = tf.nn.relu(self.conv_layer(pool1_1,ksize=[3,3,64,128],stride=[1,1,1,1],padding="SAME",name="conv2_1"))#(None,14,14,128)
+        conv2_2 = tf.nn.relu(self.conv_layer(conv2_1,ksize=[3,3,128,128],stride=[1,1,1,1],padding="SAME",name="conv2_2"))#(None,14,14,128)
+        pool2_1 = self.pool_layer(conv2_2,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool2_1")#(None,7,7,128)
 
-        # conv 3,(conv 3x3 256)=>(conv 3x3 256)=>(conv 3x3 256)=>(conv 3x3 256, pool/2)
-        conv3_1 = tf.nn.relu(self.conv_layer(pool2_1,ksize=[3,3,128,256],stride=[1,1,1,1],padding="SAME",name="conv3_1"))
-        conv3_2 = tf.nn.relu(self.conv_layer(conv3_1,ksize=[3,3,256,256],stride=[1,1,1,1],padding="SAME",name="conv3_2"))
-        conv3_3 = tf.nn.relu(self.conv_layer(conv3_2,ksize=[3,3,256,256],stride=[1,1,1,1],padding="SAME",name="conv3_3"))
-        # conv3_4 = tf.nn.relu(self.conv_layer(conv3_3,ksize=[3,3,256,256],stride=[1,1,1,1],padding="SAME",name="conv3_4")) # NX116X32X256
-        pool3_1 = self.pool_layer(conv3_3,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool3_1") # Nx58x16x256
+        conv3_1 = tf.nn.relu(self.conv_layer(pool2_1,ksize=[3,3,128,256],stride=[1,1,1,1],padding="SAME",name="conv3_1"))#(None,7,7,256)
+        conv3_2 = tf.nn.relu(self.conv_layer(conv3_1,ksize=[3,3,256,256],stride=[1,1,1,1],padding="SAME",name="conv3_2"))#(None,7,7,256)
+        conv3_3 = tf.nn.relu(self.conv_layer(conv3_2,ksize=[3,3,256,256],stride=[1,1,1,1],padding="SAME",name="conv3_3"))#(None,7,7,256)
+        pool3_1 = self.pool_layer(conv3_3,ksize=[1,1,1,1],stride=[1,2,2,1],name="pool3_1")#(None,4,4,256)
 
-        #conv 4,(conv 3x3 512) = > (conv 3x3 512) = > (conv 3x3 512) = > (conv 3x3 512, pool / 2)
-        conv4_1 = tf.nn.relu(self.conv_layer(pool3_1,ksize=[3,3,256,512],stride=[1,1,1,1],padding="SAME",name="conv4_1"))
-        conv4_2 = tf.nn.relu(self.conv_layer(conv4_1,ksize=[3,3,512,512],stride=[1,1,1,1],padding="SAME",name="conv4_2"))
-        conv4_3 = tf.nn.relu(self.conv_layer(conv4_2,ksize=[3,3,512,512],stride=[1,1,1,1],padding="SAME",name="conv4_3"))
-        # conv4_4 = tf.nn.relu(self.conv_layer(conv4_3,ksize=[3,3,512,512],stride=[1,1,1,1],padding="SAME",name="conv4_4")) # Nx58x16x512
-        pool4_1 = self.pool_layer(conv4_3,ksize=[1,2,2,1],stride=[1,1,1,1],name="pool4_1") # Nx29x8x512
+        conv4_1 = tf.nn.relu(self.conv_layer(pool3_1,ksize=[3,3,256,512],stride=[1,1,1,1],padding="SAME",name="conv4_1"))#(None,4,4,512)
+        conv4_2 = tf.nn.relu(self.conv_layer(conv4_1,ksize=[3,3,512,512],stride=[1,1,1,1],padding="SAME",name="conv4_2"))#(None,4,4,512)
+        conv4_3 = tf.nn.relu(self.conv_layer(conv4_2,ksize=[3,3,512,512],stride=[1,1,1,1],padding="SAME",name="conv4_3"))#(None,4,4,512)
+        pool4_1 = self.pool_layer(conv4_3,ksize=[1,2,2,1],stride=[1,1,1,1],name="pool4_1")#(None,3,3,256)
 
-        # # conv 4,(conv 3x3 512) = > (conv 3x3 512) = > (conv 3x3 512) = > (conv 3x3 512, pool / 2)
-        conv5_1 = tf.nn.relu(self.conv_layer(pool4_1, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_1"))
-        conv5_2 = tf.nn.relu(self.conv_layer(conv5_1, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_2"))
-        conv5_3 = tf.nn.relu(self.conv_layer(conv5_2, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_3"))
-        pool5_1 = self.pool_layer(conv5_3,ksize=[1,3,3,1],stride=[1,1,1,1],name="pool5_1") # Nx29x8x512
+        conv5_1 = tf.nn.relu(self.conv_layer(pool4_1, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_1"))#(None,3,3,512)
+        conv5_2 = tf.nn.relu(self.conv_layer(conv5_1, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_2"))#(None,3,3,512)
+        conv5_3 = tf.nn.relu(self.conv_layer(conv5_2, ksize=[3, 3, 512, 512], stride=[1, 1, 1, 1], padding="SAME", name="conv5_3"))#(None,3,3,512)
+        pool5_1 = self.pool_layer(conv5_3,ksize=[1,3,3,1],stride=[1,1,1,1],name="pool5_1")#(None,1,1,512)
 
         # Flatten
-        ft = self.flatten(pool4_1)
+        ft = self.flatten(pool5_1)#(None,512)
 
-        # Dense layer,(fc 4096)=>(fc 4096)=>(fc classes)
+        # 三个全连接层,维度变化为：(fc 4096)=>(fc 4096)=>(fc classes)，这里classes是10
         fc1 = self.fc_layer(ft,fc_dims=4096,name="fc1")
         fc2 = self.fc_layer(fc1,fc_dims=4096,name="fc2")
         fc3 = self.fc_layer(fc2,fc_dims=1000,name="fc3")
 
+        #最后一个输出层，计算softmax
+        finaloutput = self.finlaout_layer(fc3,fc_dims=10,name="final")#(None,10)
 
-        finaloutput = self.finlaout_layer(fc3,fc_dims=10,name="final")
-
-        # cost
+        # 计算交叉熵损失
         loss = tf.losses.softmax_cross_entropy(y,finaloutput)
 
         # optimize
@@ -118,9 +104,10 @@ class VGG16_Mode():
                                                    LEARNING_RATE_DECAY,
                                                    staircase=True)
         with tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE):
+            #采用Adam优化器来进行优化
             optimize = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
-        # prediction
+        # 最后一层的输出就是对应的预测结果，根据预测结果计算预测精度
         prediction_label = finaloutput
         correct_prediction = tf.equal(tf.argmax(prediction_label, 1), tf.argmax(y, 1))
         accurary = tf.reduce_mean(tf.cast(correct_prediction, dtype=tf.float32))
@@ -143,12 +130,11 @@ class VGG16_Mode():
 
     #进行训练
     def train_network(self,graph,x_train,y_train):
-        # Tensorfolw Adding more and more nodes to the previous graph results in a larger and larger memory footprint
-        # reset graph
+        #tensorflow向graph中添加越来越多的节点
         tf.reset_default_graph()
         self.sess.run(graph['optimize'],feed_dict={graph['x']:x_train, graph['y']:y_train})
 
-    def load_data(self):
+    def load_data_and_train(self):
         mnist = input_data.read_data_sets('mnist_sets', one_hot=True)
         g = self.model_bulid(28, 28, 1, 10)
         self.init_sess()
@@ -156,16 +142,17 @@ class VGG16_Mode():
             batch_train_xs, batch_train_ys = mnist.train.next_batch(500)
             batch_train_xs = np.reshape(batch_train_xs,[-1,28,28,1])
             self.train_network(g, batch_train_xs, batch_train_ys)
+            # 每100步为一个epoch
             if i % 100 == 0:
                 print("epoch:" + str(i/100))
                 print("train accurary: ",
                   self.sess.run(g['accurary'], feed_dict={g['x']: batch_train_xs, g['y']: batch_train_ys}))
 
-
+                #测试集进行精度计算
                 batch_test_xs, batch_test_ys = mnist.test.next_batch(100)
                 batch_test_xs = np.reshape(batch_test_xs, [-1, 28, 28, 1])
                 print("test accurary: ",
                           self.sess.run(g['accurary'], feed_dict={g['x']: batch_test_xs, g['y']: batch_test_ys}))
 
 VGG = VGG16_Mode()
-VGG.load_data()
+VGG.load_data_and_train()
