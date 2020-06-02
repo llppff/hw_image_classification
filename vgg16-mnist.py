@@ -138,7 +138,7 @@ class VGG16_Mode():
         mnist = input_data.read_data_sets('mnist_sets', one_hot=True)
         g = self.model_bulid(28, 28, 1, 10)
         self.init_sess()
-        for i in range(1000):
+        for i in range(5000):
             batch_train_xs, batch_train_ys = mnist.train.next_batch(500)
             batch_train_xs = np.reshape(batch_train_xs,[-1,28,28,1])
             self.train_network(g, batch_train_xs, batch_train_ys)
