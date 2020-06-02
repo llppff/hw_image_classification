@@ -156,7 +156,9 @@ class VGG16_Mode():
             batch_xs, batch_ys = mnist.train.next_batch(500)
             batch_xs = np.reshape(batch_xs,[-1,28,28,1])
             self.train_network(g, batch_xs, batch_ys)
-            print("cost: ", self.sess.run(g['cost'], feed_dict={g['x']: batch_xs, g['y']: batch_ys}), "accurary: ",
+            if i % 100 == 0:
+                print("epoch:" + str(i/100))
+                print("cost: ", self.sess.run(g['cost'], feed_dict={g['x']: batch_xs, g['y']: batch_ys}), "accurary: ",
                   self.sess.run(g['accurary'], feed_dict={g['x']: batch_xs, g['y']: batch_ys}))
 
 VGG = VGG16_Mode()
